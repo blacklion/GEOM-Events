@@ -2079,6 +2079,7 @@ void g_raid_write_metadata(struct g_raid_softc *sc, struct g_raid_volume *vol,
 void g_raid_fail_disk(struct g_raid_softc *sc,
     struct g_raid_subdisk *sd, struct g_raid_disk *disk)
 {
+	char *devctl_data;
 
 	if (disk == NULL)
 		disk = sd->sd_disk;
@@ -2091,8 +2092,13 @@ void g_raid_fail_disk(struct g_raid_softc *sc,
 		    "wrong state (%s)!", g_raid_disk_state2str(disk->d_state));
 		return;
 	}
-	if (sc->sc_md)
+	if (sc->sc_md) {
+		devctl_data = malloc(1024, M_RAID, M_WAITOK);
+		snprintf(devctl_data, 1024, "device=%s disk=%s", sd->sd_volume->v_name, g_raid_get_diskname(disk));
+		devctl_notify("GEOM", "raid", "DISCONNECT", devctl_data);
+		free(devctl_data, M_RAID);
 		G_RAID_MD_FAIL_DISK(sc->sc_md, sd, disk);
+	}
 }
 
 static void

@@ -26,8 +26,10 @@ SUBDIR=	adduser \
 	extattrctl \
 	fifolog \
 	fwcontrol \
+	geom-events \
 	getfmac \
 	getpmac \
+	ggetmode \
 	gstat \
 	i2c \
 	ifmcstat \

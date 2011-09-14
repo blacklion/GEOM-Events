@@ -2400,6 +2400,7 @@ static int
 g_mirror_update_disk(struct g_mirror_disk *disk, u_int state)
 {
 	struct g_mirror_softc *sc;
+	char *devctl_data;
 
 	sc = disk->d_softc;
 	sx_assert(&sc->sc_lock, SX_XLOCKED);
@@ -2577,6 +2578,10 @@ again:
 #endif
 		}
 		DISK_STATE_CHANGED();
+		devctl_data = malloc(1024, M_MIRROR, M_WAITOK);
+		snprintf(devctl_data, 1024, "device=%s disk=%s", sc->sc_name, g_mirror_get_diskname(disk));
+		devctl_notify("GEOM", "mirror", "DISCONNECT", devctl_data);
+		free(devctl_data, M_MIRROR);
 		G_MIRROR_DEBUG(0, "Device %s: provider %s disconnected.",
 		    sc->sc_name, g_mirror_get_diskname(disk));
 

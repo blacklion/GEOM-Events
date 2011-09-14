@@ -30,6 +30,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/bus.h>
 #include <sys/module.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
@@ -2696,6 +2697,7 @@ static int
 g_raid3_update_disk(struct g_raid3_disk *disk, u_int state)
 {
 	struct g_raid3_softc *sc;
+	char *devctl_data;
 
 	sc = disk->d_softc;
 	sx_assert(&sc->sc_lock, SX_XLOCKED);
@@ -2864,6 +2866,18 @@ again:
 		G_RAID3_DEBUG(0, "Device %s: provider %s disconnected.",
 		    sc->sc_name, g_raid3_get_diskname(disk));
 
+		devctl_data = malloc(1024, M_RAID3, M_WAITOK);
+		/* This disk is not removed yet, so we need to correct number of live disks by one */
+		snprintf(devctl_data, 1024, "device=%s disk=%s replaceable=%d",
+		    sc->sc_name, g_raid3_get_diskname(disk),
+		    ((g_raid3_ndisks(sc, -1) < sc->sc_ndisks)?0:1));
+		devctl_notify("GEOM", "raid3", "DISCONNECT", devctl_data);
+		free(devctl_data, M_RAID3);
+		G_RAID3_DEBUG(0, "Notification sent, sc: %p, ndisks: %d", sc, sc->sc_ndisks);
+		G_RAID3_DEBUG(0, ">> Live disks:");
+		G_RAID3_DEBUG(0, "Live disks: %d", g_raid3_ndisks(sc, -1));
+		G_RAID3_DEBUG(0, "<< Live disks");
+		
 		g_raid3_destroy_disk(disk);
 		break;
 	default:
